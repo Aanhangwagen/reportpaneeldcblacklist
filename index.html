@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Trello Post</title>
+    <style>
+        /* Reset some default browser styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            background: #f4f7f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .card-form {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .card-form h1 {
+            font-size: 24px;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .card-form input, 
+        .card-form select, 
+        .card-form textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #dfe3e6;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .card-form input:focus, 
+        .card-form select:focus, 
+        .card-form textarea:focus {
+            border-color: #0079bf;
+            outline: none;
+        }
+
+        .card-form button {
+            padding: 12px;
+            background-color: #0079bf;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .card-form button:hover {
+            background-color: #005fa3;
+        }
+
+        .card-form input[type="file"] {
+            padding: 5px;
+        }
+
+        .card-form input::placeholder,
+        .card-form textarea::placeholder {
+            color: #aaa;
+        }
+
+        @media (max-width: 500px) {
+            .card-form {
+                padding: 20px;
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="card-form">
+        <h1>Maak een report aan voor de website</h1>
+        <p>Het misbruiken van dit paneel zult leiden tot verbanning van de website :) </p>
+        <input type="text" id="card-name" placeholder="Name" required />
+        <select id="card-type" required>
+            <option value="" disabled selected>Wat voor soort is het?</option>
+            <option value="Server">Server Related</option>
+            <option value="Raider">Raider</option>
+            <option value="Leaker">Leaker</option>
+            <option value="Overige">Overige</option>
+        </select>
+        <textarea id="card-reason" placeholder="Reden" rows="4" required></textarea>
+        <input type="file" id="card-attachment" />
+        <button onclick="createReport()">Report versturen</button>
+    </div>
+
+    <!-- Custom Script for Trello Integration -->
+    <script>
+        // Trello API credentials
+        const API_KEY = '5f862665847c0e4c47752f7eb60180a0';
+        const API_TOKEN = 'ATTA44371dd8a9370e2d6c74a24216ccfb11aaf2b41a292ebd1ac1665f76ec021863D4DB276B';
+        // Replace this with your Trello List ID
+        const LIST_ID = '6617abf0b6c144203eba1051';
+
+        async function createReport() {
+            const name = document.getElementById('card-name').value;
+            const type = document.getElementById('card-type').value;
+            const reason = document.getElementById('card-reason').value;
+            const attachment = document.getElementById('card-attachment').files[0];
+
+            if (!name || !type || !reason) {
+                alert("Please fill in all fields.");
+                return;
+            }
+
+            // Check if attachment is larger than Trello's limit (10 MB)
+            if (attachment && attachment.size > 10 * 1024 * 1024) {
+                alert("Attachment size exceeds 10 MB. Please choose a smaller file.");
+                return;
+            }
+
+            try {
+                // Step 1: Create a new card in Trello
+                const response = await fetch(`https://api.trello.com/1/cards?key=${API_KEY}&token=${API_TOKEN}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        desc: `Type: ${type}\nReason: ${reason}`,
+                        idList: LIST_ID,
+                        pos: 'top'
+                    })
+                });
+
+                const card = await response.json();
+                console.log('Card created successfully:', card);
+
+                // Step 2: Upload attachment to the created card (if any)
+                if (attachment) {
+                    const formData = new FormData();
+                    formData.append('file', attachment);
+                    formData.append('key', API_KEY);
+                    formData.append('token', API_TOKEN);
+
+                    const uploadResponse = await fetch(`https://api.trello.com/1/cards/${card.id}/attachments`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const uploadData = await uploadResponse.json();
+                    console.log('Attachment uploaded successfully:', uploadData);
+                }
+
+                alert('Report successfully sent!');
+            } catch (error) {
+                console.error('Error creating card:', error);
+                alert('Error creating report: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
